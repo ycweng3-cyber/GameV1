@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>【未來許願機】夢想狂想文字雲 4.0</title>
+    <title>【未來許願機】夢想狂想文字雲 5.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
     <style>
-        /* 載入您上傳的特製字體 */
-        @font-face {
-            font-family: 'CustomFont';
-            src: url('your-font.ttf') format('truetype'); /* ⚠️ 請確保與您的ttf檔名一致 */
-        }
-
         * { box-sizing: border-box; }
         body {
             margin: 0;
@@ -53,7 +50,7 @@
 
     <script>
         // ===================================================================
-        // ✨ 策展人專區一：手動精選回答（固定最大的12個，尺寸將會自動呈現階梯式不相同）
+        // ✨ 策展人專區一：手動精選回答（固定最大的12個，尺寸會自動呈現階梯式不相同）
         // ===================================================================
         const bigWords = [
             "希望在成功湖畔釣到大魚", "微積分一定要歐趴！", "每天都有睡飽8小時", 
@@ -88,7 +85,11 @@
         let words = [];
         let activeIndex = -1;
         let highlightProgress = 0;
-        let devicePixelRatio = window.devicePixelRatio || 1;
+        let dpr = window.devicePixelRatio || 1;
+        let scaleFactor = 1; // 🔮 響應式微調因子：手機自動縮小，電腦保持完美原大
+
+        // 設定字體名稱
+        const fontName = "'Noto Serif TC', serif";
 
         function initWordCloud() {
             resizeCanvas();
@@ -97,73 +98,73 @@
             
             // 螢火蟲聚光燈計時器
             setInterval(triggerSpotlight, 3800);
-            setTimeout(triggerSpotlight, 1200); 
+            setTimeout(triggerSpotlight, 1500); 
         }
 
         function resizeCanvas() {
             const rect = canvas.getBoundingClientRect();
-            devicePixelRatio = window.devicePixelRatio || 1;
+            dpr = window.devicePixelRatio || 1;
             
-            // 🔮 核心優化：強制提高 Canvas 的畫布物理尺寸，達成視網膜級高清晰度
-            canvas.width = rect.width * devicePixelRatio;
-            canvas.height = rect.height * devicePixelRatio;
+            // 🔮 響應式核心：如果寬度小於 500 像素（判定為手機版），字體自動縮小為 0.65 倍
+            scaleFactor = rect.width < 500 ? 0.65 : 1.0;
+
+            // 清理畫布緩衝，重設物理像素大小，徹底終結文字霧化模糊
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
             
-            // 用 CSS 控制顯示尺寸，將字體像素壓實
+            // 用 CSS 強制壓縮尺寸，將字體邊緣壓實、銳利化
             canvas.style.width = rect.width + 'px';
             canvas.style.height = rect.height + 'px';
         }
 
         function generateLayout() {
             words = [];
-            const W = canvas.width / devicePixelRatio;
-            const H = canvas.height / devicePixelRatio;
+            const W = canvas.width / dpr;
+            const H = canvas.height / dpr;
 
-            // 1. 部署 12 個大字（自動計算階梯式尺寸，保證每一個大小都不相同）
+            // 1. 部署 12 個精選大字（融入手機/電腦響應式尺寸 scaleFactor）
             bigWords.forEach((text, idx) => {
-                // 階梯公式：從最大的 48px 一路平滑降到 32px，彼此不重複
-                const size = 48 - (idx * 1.45);
-                addWordRandomScatter(text, size, true, idx, W * 0.18, W * 0.82, H * 0.18, H * 0.82, 45);
+                const baseSize = 44 - (idx * 1.35); // 調降最大尺寸基準
+                const size = baseSize * scaleFactor; // 自動等比例適應手機
+                addWordRandomScatter(text, size, true, idx, W * 0.18, W * 0.82, H * 0.18, H * 0.82, 38 * scaleFactor);
             });
 
-            // 2. 鋪設擴散小字（連續型隨機尺寸，顏色、大小完全不相同）
+            // 2. 鋪設擴散小字（融入手機/電腦響應式尺寸 scaleFactor）
             const maxSmallWords = 60;
-            let smallIdx = 0;
             let attempts = 0;
             
-            while (words.length < (bigWords.length + maxSmallWords) && attempts < 4500) {
+            while (words.length < (bigWords.length + maxSmallWords) && attempts < 4000) {
                 attempts++;
                 const text = smallWordsPool[attempts % smallWordsPool.length];
-                
-                // 小字階梯分配：利用連續餘數與隨機，確保每個大小都不相同 (範圍落在 14px ~ 25px 之間)
-                const size = 14 + (attempts % 12) + (Math.random() * 0.8);
+                const baseSize = 13 + (attempts % 10) + (Math.random() * 0.5);
+                const size = baseSize * scaleFactor; // 自動等比例適應手機
                 
                 // 全面散開到外圍（5% ~ 95% 範圍）
-                if (addWordRandomScatter(text, size, false, attempts, W * 0.05, W * 0.95, H * 0.05, H * 0.95, 12)) {
-                    smallIdx++;
+                if (addWordRandomScatter(text, size, false, attempts, W * 0.06, W * 0.94, H * 0.06, H * 0.94, 10 * scaleFactor)) {
+                    // 成功加入才計數
                 }
             }
         }
 
         function addWordRandomScatter(text, size, isHighlight, colorSeed, minX, maxX, minY, maxY, safetyBuffer) {
             ctx.save();
-            ctx.font = `bold ${size}px 'CustomFont', sans-serif`;
+            ctx.font = `bold ${size}px ${fontName}`;
             const metrics = ctx.measureText(text);
             ctx.restore();
             
-            // 考慮到旋轉後的安全碰撞矩形外殼，適度放大寬高緩衝
-            const w = metrics.width + 16;
-            const h = size + 10;
+            const w = metrics.width + 12;
+            const h = size + 8;
 
-            const W = canvas.width / devicePixelRatio;
-            const H = canvas.height / devicePixelRatio;
+            const W = canvas.width / dpr;
+            const H = canvas.height / dpr;
             
             let localAttempts = 0;
-            while (localAttempts < 600) {
+            while (localAttempts < 500) {
                 localAttempts++;
                 const x = Math.random() * (maxX - minX) + minX;
                 const y = Math.random() * (maxY - minY) + minY;
 
-                if (x - w/2 < 15 || x + w/2 > W - 15 || y - h/2 < 15 || y + h/2 > H - 15) {
+                if (x - w/2 < 12 || x + w/2 > W - 12 || y - h/2 < 12 || y + h/2 > H - 12) {
                     continue;
                 }
 
@@ -177,12 +178,10 @@
                 }
 
                 if (!isOverlapping) {
-                    // 隨機生成微幅旋轉弧度：正負 30 度以內 (約為 -0.52 到 +0.52 弧度)
-                    // 小字可以旋轉，大字為求閱讀體驗保持更端正（正負 10 度內）
-                    const maxAngle = isHighlight ? (10 * Math.PI / 180) : (30 * Math.PI / 180);
+                    // 大字角度微調，小字維持 30 度以內靈動旋轉
+                    const maxAngle = isHighlight ? (8 * Math.PI / 180) : (28 * Math.PI / 180);
                     const rotateAngle = (Math.random() * 2 - 1) * maxAngle;
 
-                    // 確保色彩矩陣中的索引打散，大小顏色皆不相同
                     const colorIndex = (colorSeed * 7 + localAttempts) % colorPalette.length;
                     const color = colorPalette[colorIndex];
                     
@@ -199,62 +198,62 @@
         }
 
         function drawLoop() {
-            // 清除畫布，並帶入 Retina 縮放比例
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.save();
-            ctx.scale(devicePixelRatio, devicePixelRatio);
+            ctx.scale(dpr, dpr); // 完美將內容對齊高解析度像素
 
-            // 第一層：繪製所有普通文字
+            // 第一層：普通文字
             words.forEach((word, idx) => {
                 if (idx === activeIndex) return; 
                 ctx.save();
                 ctx.translate(word.x, word.y);
-                ctx.rotate(word.angle); // 套用隨機不規則微幅旋轉
+                ctx.rotate(word.angle);
 
                 word.currentSize += (word.baseSize - word.currentSize) * 0.1;
                 ctx.fillStyle = word.color;
-                ctx.font = `bold ${word.currentSize}px 'CustomFont', 'Noto Sans TC', sans-serif`;
+                ctx.font = `bold ${word.currentSize}px ${fontName}`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(word.text, 0, 0);
                 ctx.restore();
             });
 
-            // 第二層：永遠絕對置頂的螢火蟲聚光燈效果
+            // 第二層（永遠絕對置頂）：精確控光的手機版防裁切聚光燈
             if (activeIndex !== -1) {
                 const word = words[activeIndex];
                 ctx.save();
                 
-                const targetSize = word.baseSize * 1.35;
+                // 聚光燈放大倍率調降，防止手機版過度臃腫
+                const targetSize = word.baseSize * 1.25; 
                 word.currentSize += (targetSize - word.currentSize) * 0.1;
                 
-                const boxW = word.w * 1.4;
-                const boxH = word.h * 1.4;
+                const boxW = word.w * 1.28;
+                const boxH = word.h * 1.28;
                 
                 let renderX = word.x;
                 let renderY = word.y;
                 
-                const W = canvas.width / devicePixelRatio;
-                const H = canvas.height / devicePixelRatio;
+                const W = canvas.width / dpr;
+                const H = canvas.height / dpr;
 
-                // 絕對防裁切限制
-                if (renderX - boxW/2 < 20) renderX = boxW/2 + 20;
-                if (renderX + boxW/2 > W - 20) renderX = W - boxW/2 - 20;
-                if (renderY - boxH/2 < 20) renderY = boxH/2 + 20;
-                if (renderY + boxH/2 > H - 20) renderH = H - boxH/2 - 20;
+                // 邊緣反彈防裁切
+                if (renderX - boxW/2 < 15) renderX = boxW/2 + 15;
+                if (renderX + boxW/2 > W - 15) renderX = W - boxW/2 - 15;
+                if (renderY - boxH/2 < 15) renderY = boxH/2 + 15;
+                if (renderY + boxH/2 > H - 15) renderY = H - boxH/2 - 15;
 
                 ctx.translate(renderX, renderY);
-                ctx.rotate(word.angle); // 置頂聚焦字同樣保持優雅的旋轉角度
+                ctx.rotate(word.angle);
 
-                // 柔和的深中灰半透明底色框
+                // 半透明灰底框
                 ctx.beginPath();
-                ctx.fillStyle = `rgba(105, 105, 105, ${0.75 * highlightProgress})`; 
-                ctx.roundRect(-boxW/2, -boxH/2, boxW, boxH, 10);
+                ctx.fillStyle = `rgba(100, 100, 100, ${0.75 * highlightProgress})`; 
+                ctx.roundRect(-boxW/2, -boxH/2, boxW, boxH, 8);
                 ctx.fill();
 
-                // 聚光燈純白反白文字
+                // 聚光燈純白字
                 ctx.fillStyle = `rgba(255, 255, 255, ${highlightProgress})`;
-                ctx.font = `bold ${word.currentSize}px 'CustomFont', 'Noto Sans TC', sans-serif`;
+                ctx.font = `bold ${word.currentSize}px ${fontName}`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(word.text, 0, 0);
@@ -297,8 +296,12 @@
             }, 2300);
         }
 
-        window.addEventListener('load', initWordCloud);
-        // 當瀏覽器視窗縮放時，自動重新計算解析度，保持極致清晰
+        // 當 Google 雲端字體下載完成後再啟動，確保尺寸計算 100% 精確、不重疊
+        document.fonts.ready.then(() => {
+            initWordCloud();
+        });
+
+        // 當手機轉橫向或視窗變動時，自適應刷新
         window.addEventListener('resize', () => {
             resizeCanvas();
             generateLayout();
