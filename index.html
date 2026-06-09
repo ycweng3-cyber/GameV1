@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>【未來許願機】夢想狂想文字雲</title>
+    <title>【未來許願機】夢想狂想文字雲 2.0</title>
     <style>
-        /* 載入您上傳的特製字體，請確保 ttf 檔案與此 html 放在同一個資料夾 */
+        /* 載入您上傳的特製字體 */
         @font-face {
             font-family: 'CustomFont';
-            src: url('StarPandaKidsBeta2.1.ttf') format('truetype'); /* ⚠️ 請將 your-font.ttf 改為您實際的字體檔名 */
+            src: url('StarPandaKidsBeta2.1.ttf') format('truetype'); /* ⚠️ 請確保檔名正確 */
         }
 
         * { box-sizing: border-box; }
         body {
             margin: 0;
             padding: 0;
-            background: transparent; /* 透明底，融入 Tally */
+            background: transparent;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -23,16 +23,19 @@
             overflow: hidden;
         }
 
-        /* 文字雲外殼：畫布底色為純白，並依需求做圓角化、加陰影 */
+        /* 文字雲外殼：畫布底色為純白，圓角化並加上淡紫色立體陰影 */
         .wordcloud-wrapper {
             position: relative;
             width: 100%;
-            max-width: 800px;
-            height: 450px;
+            max-width: 850px;
+            height: 480px;
             background: #FFFFFF; 
-            border-radius: 20px; /* 邊角圓化 */
-            box-shadow: 0 10px 30px rgba(169, 156, 199, 0.2); /* 帶有薰衣草紫的溫柔陰影 */
+            border-radius: 20px; 
+            box-shadow: 0 12px 40px rgba(169, 156, 199, 0.25);
             overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         canvas {
@@ -50,140 +53,182 @@
 
     <script>
         // ===================================================================
-        // ✨ 策展人專區一：手動精選回答與大小權重設定（數字越大，字體越大）
+        // ✨ 策展人專區一：手動精選回答（預設大字體，維持 10-15 個最佳）
         // ===================================================================
-        const wordData = [
-            // 您精選奇怪但有趣的回答（手動調整大小，確保它們最吸睛）
-            { text: "希望在成功湖畔釣到大魚", size: 42, isHighlight: true },
-            { text: "微積分一定要歐趴！", size: 38, isHighlight: true },
-            { text: "每天都有睡飽8小時", size: 35, isHighlight: true },
-            { text: "交到男女朋友", size: 35, isHighlight: true },
-            { text: "Logic Pro神曲產出", size: 32, isHighlight: true },
-            { text: "希望能跟校長合照", size: 30, isHighlight: true },
-            { text: "被新竹的風吹到免修體育", size: 30, isHighlight: true },
-            
-            // 其他隨機收集到的常態回答
-            { text: "順利畢業", size: 24, isHighlight: false },
-            { text: "歐趴", size: 22, isHighlight: false },
-            { text: "碩論兩年過關", size: 25, isHighlight: false },
-            { text: "找到竹科好實習", size: 23, isHighlight: false },
-            { text: "梅竹賽清大總錦標", size: 26, isHighlight: false },
-            { text: "吃遍新竹綠洲", size: 21, isHighlight: false },
-            { text: "腳踏車不被偷", size: 22, isHighlight: false },
-            { text: "想去日本畢旅", size: 20, isHighlight: false },
-            { text: "All Pass", size: 24, isHighlight: false },
-            { text: "成為斜槓青年", size: 20, isHighlight: false },
-            { text: "天天準時上課", size: 18, isHighlight: false }
+        const bigWords = [
+            "希望在成功湖畔釣到大魚", "微積分一定要歐趴！", "每天都有睡飽8小時", 
+            "交到男女朋友", "Logic Pro神曲產出", "希望能跟校長合照", 
+            "被新竹的風吹到免修體育", "腳踏車永遠不被偷", "順利兩年準時畢業", 
+            "碩論一次就過關", "梅竹賽清大總錦標", "一定要拿到書卷獎"
         ];
 
-        // 🎨 參考圖片調配：略帶灰調、溫柔文青的繽紛色系（完美避開純灰色）
+        // ===================================================================
+        // ✨ 策展人專區二：背景填充小字（用來精準勾勒出 Logo 的書本與階梯線條）
+        // ===================================================================
+        const smallWordsPool = [
+            "歐趴", "AllPass", "實習", "竹科", "台積電", "聯發科", "成功湖", 
+            "夜唱", "總圖", "宵夜街", "水木", "清茂", "大吃市", "巨城", "九降風", 
+            "畢旅", "日本", "下課", "睡覺", "學分", "通通選到", "加簽成功", "看書", 
+            "梅竹", "熱血", "青春", "100分", "大吉", "狂想曲", "未來", "夢想", 
+            "不迷惘", "加油", "抽中宿舍", "冷氣卡滿格", "WiFi超快", "早八不遲到"
+        ];
+
+        // 🎨 豐富且帶有莫蘭迪灰調的繽紛色系（完美避開純灰色）
         const colorPalette = [
-            "#B39DDB", // 灰調淡紫
-            "#90CAF9", // 灰調粉藍
-            "#FFCC80", // 灰調柔橘
-            "#A5D6A7", // 灰調嫩綠
-            "#F48FB1", // 灰調柔粉
-            "#80CBC4"  // 灰調藍綠
+            "#B39DDB", "#90CAF9", "#FFCC80", "#A5D6A7", "#F48FB1", 
+            "#80CBC4", "#CE93D8", "#B0BEC5", "#FFAB91", "#C5E1A5"
         ];
 
         const canvas = document.getElementById('cloudCanvas');
         const ctx = canvas.getContext('2d');
         let words = [];
-        let activeIndex = -1; // 當前被「聚光燈」抽中放大的文字索引
-        let highlightProgress = 0; // 灰底淡入淡出的動畫進度
+        let activeIndex = -1;
+        let highlightProgress = 0;
+        let logoMaskCanvas = document.createElement('canvas');
+        let logoMaskCtx = logoMaskCanvas.getContext('2d');
 
-        // ===================================================================
-        // ✨ 策展人專區二：設置您的機關 Logo 遮罩（若無可保持空白，會自動以 M 字型呈現）
-        // ===================================================================
+        // 載入清大圖書館 Logo 作為遮罩基準
         const logoImg = new Image();
-        logoImg.src = 'logo.png'; // ⚠️ 請將您的機構Logo圖檔命名為 logo.png 放在同目錄
+        logoImg.src = 'logo.png'; 
+
+        logoImg.onload = () => {
+            initWordCloud();
+        };
+
+        function initWordCloud() {
+            resizeCanvas();
+            generateLayout();
+            drawLoop();
+            
+            // 螢火蟲霓虹燈計時器（每 3.8 秒閃爍一次）
+            setInterval(triggerSpotlight, 3800);
+            setTimeout(triggerSpotlight, 1200); 
+        }
 
         function resizeCanvas() {
             const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width * window.devicePixelRatio;
-            canvas.height = rect.height * window.devicePixelRatio;
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            
+            // 同步縮放後台的 Logo 遮罩畫布
+            logoMaskCanvas.width = canvas.width;
+            logoMaskCanvas.height = canvas.height;
+            
+            // 將 Logo 縮放並繪製到隱藏畫布中，並在四周留白 15% 防止文字貼邊
+            const padding = canvas.width * 0.15;
+            const targetW = canvas.width - (padding * 2);
+            const targetH = canvas.height - (padding * 2);
+            
+            // 保持比例居中
+            const ratio = Math.min(targetW / logoImg.width, targetH / logoImg.height);
+            const x = (canvas.width - logoImg.width * ratio) / 2;
+            const y = (canvas.height - logoImg.height * ratio) / 2;
+            
+            logoMaskCtx.clearRect(0, 0, canvas.width, canvas.height);
+            logoMaskCtx.drawImage(logoImg, x, y, logoImg.width * ratio, logoImg.height * ratio);
         }
 
-        // 初始化文字物理位置（防止重疊演算法）
-        function initWords() {
+        // 檢查該座標點在 Logo 上是否有顏色（是否可以放字）
+        function isInsideLogo(x, y) {
+            try {
+                const imgData = logoMaskCtx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
+                return imgData[3] > 30; // 透明度大於 30 視為有效區
+            } catch (e) {
+                return true; 
+            }
+        }
+
+        function generateLayout() {
             words = [];
-            const W = canvas.width / window.devicePixelRatio;
-            const H = canvas.height / window.devicePixelRatio;
+            const W = canvas.width;
+            const H = canvas.height;
 
-            wordData.forEach((item, idx) => {
-                ctx.font = `bold ${item.size}px 'CustomFont', sans-serif`;
-                const metrics = ctx.measureText(item.text);
-                const w = metrics.width + 16;
-                const h = item.size + 12;
+            // 1. 先塞入需要被凸顯的手動精選大字
+            bigWords.forEach((text, idx) => {
+                const size = Math.floor(Math.min(W, H) * 0.055) + Math.floor(Math.random() * 8); // 動態大字體
+                addWordItem(text, size, true, idx);
+            });
 
-                let x, y, col, attempts = 0;
-                let isOverlapping = true;
+            // 2. 密集塞入背景填充小字，直到嘗試上限，徹底把 Logo 書本和階梯形狀「逼」出來
+            let attempts = 0;
+            const maxSmallWords = 65; // 背景小字總數
+            let smallIdx = 0;
+            
+            while (words.length < (bigWords.length + maxSmallWords) && attempts < 2500) {
+                attempts++;
+                const text = smallWordsPool[smallIdx % smallWordsPool.length];
+                const size = Math.floor(Math.min(W, H) * 0.025) + Math.floor(Math.random() * 5); // 輕量小字體
+                
+                if (addWordItem(text, size, false, words.length)) {
+                    smallIdx++;
+                }
+            }
+        }
 
-                // 螺旋形演算法或隨機嘗試，確保文字不重疊，且大致符合 Logo 輪廓
-                while (isOverlapping && attempts < 300) {
-                    attempts++;
-                    // 如果沒有提供 logo.png，預設會自動排成一個雙峰(M字型)的分布，好用又好看
-                    x = Math.random() * (W - w) + w/2;
-                    y = Math.random() * (H - h) + h/2;
+        function addWordItem(text, size, isHighlight, colorSeed) {
+            ctx.font = `bold ${size}px 'CustomFont', sans-serif`;
+            const metrics = ctx.measureText(text);
+            const paddingX = 14;
+            const paddingY = 8;
+            const w = metrics.width + paddingX;
+            const h = size + paddingY;
 
-                    // 基本邊界與 Logo 造型範圍限制
-                    if (y < H * 0.2 || y > H * 0.85) continue; 
-                    if (x > W * 0.4 && x < W * 0.6 && y > H * 0.6) continue; // 底部留空做出雙足感
+            const W = canvas.width;
+            const H = canvas.height;
+            
+            let x, y, isOverlapping;
+            let localAttempts = 0;
 
-                    isOverlapping = false;
-                    for (let j = 0; j < words.length; j++) {
-                        const other = words[j];
-                        if (Math.abs(x - other.x) < (w + other.w)/2 && Math.abs(y - other.y) < (h + other.h)/2) {
-                            isOverlapping = true;
-                            break;
-                        }
+            while (localAttempts < 400) {
+                localAttempts++;
+                // 在畫布內隨機投點
+                x = Math.random() * (W - w - 40) + w/2 + 20;
+                y = Math.random() * (H - h - 40) + h/2 + 20;
+
+                // 核心關鍵：檢查字體的中心與四角是否落在 Logo 的實色範圍內
+                if (!isInsideLogo(x, y) || !isInsideLogo(x - w/2, y - h/2) || !isInsideLogo(x + w/2, y + h/2)) {
+                    continue; 
+                }
+
+                // 檢查是否與現有文字重疊
+                isOverlapping = false;
+                for (let i = 0; i < words.length; i++) {
+                    const other = words[i];
+                    // 增加 4 像素的防撞緩衝安全距離
+                    if (Math.abs(x - other.x) < (w + other.w)/2 + 4 && Math.abs(y - other.y) < (h + other.h)/2 + 4) {
+                        isOverlapping = true;
+                        break;
                     }
                 }
 
-                words.push({
-                    text: item.text,
-                    baseSize: item.size,
-                    currentSize: item.size,
-                    x: x, y: y, w: w, h: h,
-                    color: colorPalette[idx % colorPalette.length],
-                    isHighlight: item.isHighlight
-                });
-            });
+                if (!isOverlapping) {
+                    // 挑選顏色，並確保前後兩格顏色不相同
+                    let color = colorPalette[colorSeed % colorPalette.length];
+                    
+                    words.push({
+                        text: text,
+                        baseSize: size,
+                        currentSize: size,
+                        x: x, y: y, w: w, h: h,
+                        color: color,
+                        isHighlight: isHighlight
+                    });
+                    return true;
+                }
+            }
+            return false;
         }
 
-        // 渲染主循環（每秒60幀流暢重繪）
-        function draw() {
-            const W = canvas.width / window.devicePixelRatio;
-            const H = canvas.height / window.devicePixelRatio;
-            ctx.clearRect(0, 0, W, H);
+        function drawLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // 分成兩次繪製：第一次畫普通字，第二次畫置頂的高亮灰底字，確保絕對不被遮擋
             words.forEach((word, idx) => {
+                if (idx === activeIndex) return; // 留給後面置頂繪製
                 ctx.save();
                 ctx.translate(word.x, word.y);
-
-                // 處理第 7 點：螢火蟲聚光燈效果
-                if (idx === activeIndex) {
-                    // 緩慢平滑地放大文字與灰底
-                    word.currentSize += (word.baseSize * 1.35 - word.currentSize) * 0.1;
-                    
-                    // 畫上圖片2的「半透明灰底反白效果」
-                    ctx.beginPath();
-                    ctx.fillStyle = `rgba(125, 125, 125, ${0.65 * highlightProgress})`; // 沉穩的半透明中灰色
-                    // 繪製圓角灰底框
-                    const boxW = word.w * 1.35;
-                    const boxH = word.h * 1.35;
-                    ctx.roundRect(-boxW/2, -boxH/2, boxW, boxH, 8);
-                    ctx.fill();
-
-                    // 文字反白（純白）
-                    ctx.fillStyle = `rgba(255, 255, 255, ${highlightProgress})`;
-                } else {
-                    // 非聚焦文字緩慢回到原狀
-                    word.currentSize += (word.baseSize - word.currentSize) * 0.1;
-                    ctx.fillStyle = word.color;
-                }
-
+                word.currentSize += (word.baseSize - word.currentSize) * 0.1;
+                ctx.fillStyle = word.color;
                 ctx.font = `bold ${word.currentSize}px 'CustomFont', 'Noto Sans TC', sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -191,60 +236,82 @@
                 ctx.restore();
             });
 
-            requestAnimationFrame(draw);
+            // 👑 置頂繪製：螢火蟲聚焦灰底反白效果
+            if (activeIndex !== -1) {
+                const word = words[activeIndex];
+                ctx.save();
+                
+                // 為了防裁切，動態計算邊界限制，如果擴大後的灰框超出邊界，自動往內彈回
+                const targetSize = word.baseSize * 1.35;
+                word.currentSize += (targetSize - word.currentSize) * 0.1;
+                
+                const boxW = word.w * 1.38;
+                const boxH = word.h * 1.38;
+                
+                let renderX = word.x;
+                let renderY = word.y;
+                
+                // 左右防邊緣裁切安全機制
+                if (renderX - boxW/2 < 15) renderX = boxW/2 + 15;
+                if (renderX + boxW/2 > canvas.width - 15) renderX = canvas.width - boxW/2 - 15;
+                // 上下防邊緣裁切安全機制
+                if (renderY - boxH/2 < 15) renderY = boxH/2 + 15;
+                if (renderY + boxH/2 > canvas.height - 15) renderY = canvas.height - boxH/2 - 15;
+
+                ctx.translate(renderX, renderY);
+
+                // 繪製半透明灰底
+                ctx.beginPath();
+                ctx.fillStyle = `rgba(100, 100, 100, ${0.72 * highlightProgress})`; 
+                ctx.roundRect(-boxW/2, -boxH/2, boxW, boxH, 10);
+                ctx.fill();
+
+                // 文字反白呈現（純白微光）
+                ctx.fillStyle = `rgba(255, 255, 255, ${highlightProgress})`;
+                ctx.font = `bold ${word.currentSize}px 'CustomFont', 'Noto Sans TC', sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(word.text, 0, 0);
+                ctx.restore();
+            }
+
+            requestAnimationFrame(drawLoop);
         }
 
-        // 🎯 螢火蟲一閃一閃的「計時器」調度機制
+        // 啟動螢火蟲聚光燈
         function triggerSpotlight() {
-            // 挑選只在「手動精選區（isHighlight: true）」內進行隨機輪播
-            const normalHighlights = words.reduce((acc, w, i) => w.isHighlight ? [...acc, i] : acc, []);
-            if (normalHighlights.length === 0) return;
+            const highlightPool = words.reduce((acc, w, i) => w.isHighlight ? [...acc, i] : acc, []);
+            if (highlightPool.length === 0) return;
 
             let nextIdx;
             do {
-                nextIdx = normalHighlights[Math.floor(Math.random() * normalHighlights.length)];
-            } while (nextIdx === activeIndex && normalHighlights.length > 1);
+                nextIdx = highlightPool[Math.floor(Math.random() * highlightPool.length)];
+            } while (nextIdx === activeIndex && highlightPool.length > 1);
 
-            // 淡入灰底
             activeIndex = nextIdx;
             highlightProgress = 0;
+            
+            // 溫和淡入
             let fadeIn = setInterval(() => {
-                highlightProgress += 0.05;
+                highlightProgress += 0.06;
                 if (highlightProgress >= 1) {
                     highlightProgress = 1;
                     clearInterval(fadeIn);
                 }
-            }, 30);
+            }, 25);
 
-            // 保持展示 2.5 秒（緩慢打地鼠感），接著淡出
+            // 持續 2.3 秒（打地鼠節奏），隨後溫和淡出
             setTimeout(() => {
                 let fadeOut = setInterval(() => {
-                    highlightProgress -= 0.05;
+                    highlightProgress -= 0.06;
                     if (highlightProgress <= 0) {
                         highlightProgress = 0;
-                        activeIndex = -1; // 清空聚焦
+                        activeIndex = -1; 
                         clearInterval(fadeOut);
                     }
-                }, 30);
-            }, 2500);
+                }, 25);
+            }, 2300);
         }
-
-        // 啟動流程
-        window.addEventListener('load', () => {
-            resizeCanvas();
-            initWords();
-            draw();
-            
-            // 每 3.8 秒換下一個夢想發光
-            setInterval(triggerSpotlight, 3800);
-            // 延遲 1 秒首發
-            setTimeout(triggerSpotlight, 1000); 
-        });
-
-        window.addEventListener('resize', () => {
-            resizeCanvas();
-            initWords();
-        });
     </script>
 </body>
 </html>
