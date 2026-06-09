@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>【未來許願機】夢想狂想文字雲 3.1</title>
+    <title>【未來許願機】夢想狂想文字雲 4.0</title>
     <style>
         /* 載入您上傳的特製字體 */
         @font-face {
             font-family: 'CustomFont';
-            src: url('StarPandaKidsBeta2.1.ttf') format('truetype'); /* ⚠️ 請確保與您的ttf檔名乙致 */
+            src: url('your-font.ttf') format('truetype'); /* ⚠️ 請確保與您的ttf檔名一致 */
         }
 
         * { box-sizing: border-box; }
@@ -53,7 +53,7 @@
 
     <script>
         // ===================================================================
-        // ✨ 策展人專區一：手動精選回答（置大字體，維持 10-15 個最完美）
+        // ✨ 策展人專區一：手動精選回答（固定最大的12個，尺寸將會自動呈現階梯式不相同）
         // ===================================================================
         const bigWords = [
             "希望在成功湖畔釣到大魚", "微積分一定要歐趴！", "每天都有睡飽8小時", 
@@ -63,7 +63,7 @@
         ];
 
         // ===================================================================
-        // ✨ 策展人專區二：背景填充小字（打散到全網頁各處，營造向外滿天星斗感）
+        // ✨ 策展人專區二：背景填充小字
         // ===================================================================
         const smallWordsPool = [
             "歐趴", "AllPass", "實習", "竹科", "台積電", "聯發科", "成功湖", 
@@ -88,6 +88,7 @@
         let words = [];
         let activeIndex = -1;
         let highlightProgress = 0;
+        let devicePixelRatio = window.devicePixelRatio || 1;
 
         function initWordCloud() {
             resizeCanvas();
@@ -101,58 +102,71 @@
 
         function resizeCanvas() {
             const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
+            devicePixelRatio = window.devicePixelRatio || 1;
+            
+            // 🔮 核心優化：強制提高 Canvas 的畫布物理尺寸，達成視網膜級高清晰度
+            canvas.width = rect.width * devicePixelRatio;
+            canvas.height = rect.height * devicePixelRatio;
+            
+            // 用 CSS 控制顯示尺寸，將字體像素壓實
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
         }
 
-        // 全新「全面開散演算法」：打破聚集，強制均勻撒在整個大畫布上
         function generateLayout() {
             words = [];
-            const W = canvas.width;
-            const H = canvas.height;
+            const W = canvas.width / devicePixelRatio;
+            const H = canvas.height / devicePixelRatio;
 
-            // 1. 散落大字（配置在中間大核心區，但維持極高防撞距離，防止字體靠太近）
+            // 1. 部署 12 個大字（自動計算階梯式尺寸，保證每一個大小都不相同）
             bigWords.forEach((text, idx) => {
-                const size = Math.floor(Math.min(W, H) * 0.052) + Math.floor(Math.random() * 5);
-                addWordRandomScatter(text, size, true, idx, W * 0.2, W * 0.8, H * 0.2, H * 0.8, 45);
+                // 階梯公式：從最大的 48px 一路平滑降到 32px，彼此不重複
+                const size = 48 - (idx * 1.45);
+                addWordRandomScatter(text, size, true, idx, W * 0.18, W * 0.82, H * 0.18, H * 0.82, 45);
             });
 
-            // 2. 徹底向外大散落小字（散落到整個畫布的 100% 邊緣，增加全畫面的豐富精緻度）
-            const maxSmallWords = 65; // 調高到 65 個小字，塞滿整個大白底視窗
+            // 2. 鋪設擴散小字（連續型隨機尺寸，顏色、大小完全不相同）
+            const maxSmallWords = 60;
             let smallIdx = 0;
             let attempts = 0;
             
-            while (words.length < (bigWords.length + maxSmallWords) && attempts < 4000) {
+            while (words.length < (bigWords.length + maxSmallWords) && attempts < 4500) {
                 attempts++;
-                const text = smallWordsPool[smallIdx % smallWordsPool.length];
-                const size = Math.floor(Math.min(W, H) * 0.024) + Math.floor(Math.random() * 4);
+                const text = smallWordsPool[attempts % smallWordsPool.length];
                 
-                // 允許小字撒到最外圍邊界（畫布的 5% ~ 95% 範圍，全面向外開散）
-                if (addWordRandomScatter(text, size, false, words.length, W * 0.05, W * 0.95, H * 0.05, H * 0.95, 12)) {
+                // 小字階梯分配：利用連續餘數與隨機，確保每個大小都不相同 (範圍落在 14px ~ 25px 之間)
+                const size = 14 + (attempts % 12) + (Math.random() * 0.8);
+                
+                // 全面散開到外圍（5% ~ 95% 範圍）
+                if (addWordRandomScatter(text, size, false, attempts, W * 0.05, W * 0.95, H * 0.05, H * 0.95, 12)) {
                     smallIdx++;
                 }
             }
         }
 
         function addWordRandomScatter(text, size, isHighlight, colorSeed, minX, maxX, minY, maxY, safetyBuffer) {
+            ctx.save();
             ctx.font = `bold ${size}px 'CustomFont', sans-serif`;
             const metrics = ctx.measureText(text);
-            const w = metrics.width + 14;
-            const h = size + 8;
+            ctx.restore();
+            
+            // 考慮到旋轉後的安全碰撞矩形外殼，適度放大寬高緩衝
+            const w = metrics.width + 16;
+            const h = size + 10;
 
+            const W = canvas.width / devicePixelRatio;
+            const H = canvas.height / devicePixelRatio;
+            
             let localAttempts = 0;
-            while (localAttempts < 500) {
+            while (localAttempts < 600) {
                 localAttempts++;
-                // 在限定的擴散區間內隨機投點
                 const x = Math.random() * (maxX - minX) + minX;
                 const y = Math.random() * (maxY - minY) + minY;
 
-                // 超出畫布邊界的安全過濾
-                if (x - w/2 < 15 || x + w/2 > canvas.width - 15 || y - h/2 < 15 || y + h/2 > canvas.height - 15) {
+                if (x - w/2 < 15 || x + w/2 > W - 15 || y - h/2 < 15 || y + h/2 > H - 15) {
                     continue;
                 }
 
-                // 嚴格碰撞檢查，加上傳入的 safetyBuffer 安全防撞距離
                 let isOverlapping = false;
                 for (let i = 0; i < words.length; i++) {
                     const other = words[i];
@@ -163,11 +177,20 @@
                 }
 
                 if (!isOverlapping) {
-                    const color = colorPalette[colorSeed % colorPalette.length];
+                    // 隨機生成微幅旋轉弧度：正負 30 度以內 (約為 -0.52 到 +0.52 弧度)
+                    // 小字可以旋轉，大字為求閱讀體驗保持更端正（正負 10 度內）
+                    const maxAngle = isHighlight ? (10 * Math.PI / 180) : (30 * Math.PI / 180);
+                    const rotateAngle = (Math.random() * 2 - 1) * maxAngle;
+
+                    // 確保色彩矩陣中的索引打散，大小顏色皆不相同
+                    const colorIndex = (colorSeed * 7 + localAttempts) % colorPalette.length;
+                    const color = colorPalette[colorIndex];
+                    
                     words.push({
                         text: text, baseSize: size, currentSize: size,
                         x: x, y: y, w: w, h: h,
-                        color: color, isHighlight: isHighlight
+                        color: color, isHighlight: isHighlight,
+                        angle: rotateAngle
                     });
                     return true;
                 }
@@ -176,13 +199,18 @@
         }
 
         function drawLoop() {
+            // 清除畫布，並帶入 Retina 縮放比例
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.scale(devicePixelRatio, devicePixelRatio);
 
-            // 第一層：普通文字
+            // 第一層：繪製所有普通文字
             words.forEach((word, idx) => {
                 if (idx === activeIndex) return; 
                 ctx.save();
                 ctx.translate(word.x, word.y);
+                ctx.rotate(word.angle); // 套用隨機不規則微幅旋轉
+
                 word.currentSize += (word.baseSize - word.currentSize) * 0.1;
                 ctx.fillStyle = word.color;
                 ctx.font = `bold ${word.currentSize}px 'CustomFont', 'Noto Sans TC', sans-serif`;
@@ -192,7 +220,7 @@
                 ctx.restore();
             });
 
-            // 第二層：永遠絕對置頂的螢火蟲聚光燈效果（灰底反白）
+            // 第二層：永遠絕對置頂的螢火蟲聚光燈效果
             if (activeIndex !== -1) {
                 const word = words[activeIndex];
                 ctx.save();
@@ -200,19 +228,23 @@
                 const targetSize = word.baseSize * 1.35;
                 word.currentSize += (targetSize - word.currentSize) * 0.1;
                 
-                const boxW = word.w * 1.38;
-                const boxH = word.h * 1.38;
+                const boxW = word.w * 1.4;
+                const boxH = word.h * 1.4;
                 
                 let renderX = word.x;
                 let renderY = word.y;
                 
-                // 四周絕對防裁切安全極限值
+                const W = canvas.width / devicePixelRatio;
+                const H = canvas.height / devicePixelRatio;
+
+                // 絕對防裁切限制
                 if (renderX - boxW/2 < 20) renderX = boxW/2 + 20;
-                if (renderX + boxW/2 > canvas.width - 20) renderX = canvas.width - boxW/2 - 20;
+                if (renderX + boxW/2 > W - 20) renderX = W - boxW/2 - 20;
                 if (renderY - boxH/2 < 20) renderY = boxH/2 + 20;
-                if (renderY + boxH/2 > canvas.height - 20) renderY = canvas.height - boxH/2 - 20;
+                if (renderY + boxH/2 > H - 20) renderH = H - boxH/2 - 20;
 
                 ctx.translate(renderX, renderY);
+                ctx.rotate(word.angle); // 置頂聚焦字同樣保持優雅的旋轉角度
 
                 // 柔和的深中灰半透明底色框
                 ctx.beginPath();
@@ -229,6 +261,7 @@
                 ctx.restore();
             }
 
+            ctx.restore();
             requestAnimationFrame(drawLoop);
         }
 
@@ -265,6 +298,11 @@
         }
 
         window.addEventListener('load', initWordCloud);
+        // 當瀏覽器視窗縮放時，自動重新計算解析度，保持極致清晰
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            generateLayout();
+        });
     </script>
 </body>
 </html>
